@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <limits>
 #include <getopt.h>
+#include <fstream>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
@@ -774,7 +775,41 @@ int main(int argc, char** argv)
           // show available images
 
           const de265_image* img = de265_get_next_picture(ctx);
+
+
           if (img) {
+            // save the CU_map
+          
+            char fname[100];
+
+            sprintf(fname, "/home/huyb/Lab/ECCV2022/test_%03d.bin", framecnt);
+
+            printf("frame count: %d \n", framecnt);
+
+            char** CU_map;
+            CU_map = de265_get_CU_map(img);
+
+            std::ofstream outfile(fname, std::ios::binary | std::ios::out);
+
+            if (!outfile.is_open())
+            {
+              perror("The output file is not correctly opened!\n");
+            }
+
+            // for (std::vector<std::vector<char>>::iterator it=CU_map.begin();it!=CU_map.end();++it)
+            // {
+            //   outfile.write(&it->front(), it->size() * sizeof(char));
+            // }
+
+            int frame_width = de265_get_image_width(img,0);
+            int frame_height = de265_get_image_height(img,0);
+
+            for (int i=0; i<frame_height; i++)
+              for (int j=0; j<frame_width; j++)
+              {
+                outfile.write(&CU_map[i][j], sizeof(char));
+              }
+
             if (measure_quality) {
               measure(img);
             }

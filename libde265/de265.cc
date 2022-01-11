@@ -736,3 +736,55 @@ LIBDE265_API int de265_get_image_matrix_coefficients(const struct de265_image* i
 }
 
 }
+
+char **de265_get_CU_map(const de265_image* srcimg)
+{
+  // printf("enter function! \n");
+  const seq_parameter_set& sps = srcimg->get_sps();
+  // printf("get parameter set! \n");
+  int minCbSize = sps.MinCbSizeY;
+
+  // initialize with zeros.
+  int row_cnt = sps.PicHeightInMinCbsY*minCbSize;
+  int col_cnt = sps.PicWidthInMinCbsY*minCbSize;
+
+  // printf("before malloc! \n");
+
+  char **CU_map = (char **)malloc(row_cnt*sizeof(char *));
+
+  for (int i=0; i<row_cnt; i++)
+  {
+    CU_map[i] = (char *)malloc(col_cnt*sizeof(char ));
+    for (int j=0; j<col_cnt; j++)
+      CU_map[i][j] = 0;
+  }
+  // printf("matrix initialization! \n");
+  // std::vector<std::vector<char>> CU_map(sps.PicHeightInMinCbsY*minCbSize, std::vector<char> (sps.PicWidthInMinCbsY*minCbSize,0));
+
+  // printf("max y: %d, max x: %d, minCbSize: %d \n", sps.PicHeightInMinCbsY, sps.PicWidthInMinCbsY, minCbSize);
+
+  for (int y0=0;y0<sps.PicHeightInMinCbsY;y0++)
+    for (int x0=0;x0<sps.PicWidthInMinCbsY;x0++)
+    {
+      int log2CbSize = srcimg->get_log2CbSize_cbUnits(x0,y0);
+      if (log2CbSize==0) {
+        continue;
+      }
+
+      int xb = x0*minCbSize;
+      int yb = y0*minCbSize;
+
+      int CbSize = 1<<log2CbSize;
+
+      for (int xx=xb;xx<xb+CbSize;xx++)
+        for (int yy=yb;yy<yb+CbSize;yy++)
+        {
+          CU_map[yy][xx] = CbSize;
+          // if (yy < 18 && xx < 18)
+            // printf("x0: %d, y0: %d, CbSize: %d. \n", xx, yy, CU_map[yy][xx]);
+        }
+    }
+  
+  return CU_map;
+}
+

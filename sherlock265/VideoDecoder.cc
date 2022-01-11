@@ -36,7 +36,7 @@ using namespace videogfx;
 
 //#include "decctx.h"
 #include "visualize.h"
-
+#include <fstream>
 
 VideoDecoder::VideoDecoder()
   : mFH(NULL),
@@ -332,6 +332,28 @@ void VideoDecoder::show_frame(const de265_image* img)
     }
 
   emit displayImage(qimg);
+
+  std::vector<std::vector<char>> CU_map;
+  CU_map = gen_CU_map(img);
+
+  char fname[100];
+
+  sprintf(fname, "/home/huyb/Lab/ECCV2022/test_%03d.bin", mFrameCount);
+
+  printf("frame count: %d \n", mFrameCount);
+
+  std::ofstream outfile(fname, std::ios::binary | std::ios::out);
+
+  if (!outfile.is_open())
+  {
+    perror("The output file is not correctly opened!\n");
+  }
+
+  for (std::vector<std::vector<char>>::iterator it=CU_map.begin();it!=CU_map.end();++it)
+  {
+    outfile.write(&it->front(), it->size() * sizeof(char));
+  }
+
   mNextBuffer = 1-mNextBuffer;
   mFrameCount++;
 }

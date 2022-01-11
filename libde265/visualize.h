@@ -24,6 +24,8 @@
 #include "libde265/de265.h"
 #include "libde265/image.h"
 
+#include <vector>
+
 
 void write_picture_to_file(const de265_image* img, const char* filename);
 
@@ -42,6 +44,8 @@ LIBDE265_API void draw_QuantPY(const de265_image* img, uint8_t* dst, int stride,
 LIBDE265_API void draw_Motion(const de265_image* img, uint8_t* dst, int stride, int pixelSize);
 LIBDE265_API void draw_Slices(const de265_image* img, uint8_t* dst, int stride, int pixelSize);
 LIBDE265_API void draw_Tiles(const de265_image* img, uint8_t* dst, int stride, int pixelSize);
+
+LIBDE265_API std::vector<std::vector<char>> gen_CU_map(const de265_image* srcimg);
 
 #ifdef __cplusplus
 }
