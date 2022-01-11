@@ -71,6 +71,8 @@ bool output_with_videogfx=false;
 bool logging=true;
 bool no_acceleration=false;
 const char *output_filename = "out.yuv";
+bool write_cu_map=false;
+const char *CU_map_dir="./";
 uint32_t max_frames=UINT32_MAX;
 bool write_bytestream=false;
 const char *bytestream_filename;
@@ -91,6 +93,7 @@ static struct option long_options[] = {
   {"profile",    no_argument,       0, 'p' },
   {"frames",     required_argument, 0, 'f' },
   {"output",     required_argument, 0, 'o' },
+  {"CUmap-path", required_argument, 0, 'p' },
   {"dump",       no_argument,       0, 'd' },
   {"nal",        no_argument,       0, 'n' },
   {"videogfx",   no_argument,       0, 'V' },
@@ -564,7 +567,7 @@ int main(int argc, char** argv)
   while (1) {
     int option_index = 0;
 
-    int c = getopt_long(argc, argv, "qt:chf:o:dLB:n0vT:m:se"
+    int c = getopt_long(argc, argv, "qt:chf:o:p:dLB:n0vT:m:se"
 #if HAVE_VIDEOGFX && HAVE_SDL
                         "V"
 #endif
@@ -578,6 +581,7 @@ int main(int argc, char** argv)
     case 'c': check_hash=true; break;
     case 'f': max_frames=atoi(optarg); break;
     case 'o': write_yuv=true; output_filename=optarg; break;
+    case 'p': write_cu_map=true; CU_map_dir=optarg; break;
     case 'h': show_help=true; break;
     case 'd': dump_headers=true; break;
     case 'n': nal_input=true; break;
@@ -606,6 +610,7 @@ int main(int argc, char** argv)
     fprintf(stderr,"  -n, --nal         input is a stream with 4-byte length prefixed NAL units\n");
     fprintf(stderr,"  -f, --frames N    set number of frames to process\n");
     fprintf(stderr,"  -o, --output      write YUV reconstruction\n");
+    fprintf(stderr,"  -p, --CUmap-path  write CU map\n");
     fprintf(stderr,"  -d, --dump        dump headers\n");
 #if HAVE_VIDEOGFX && HAVE_SDL
     fprintf(stderr,"  -V, --videogfx    output with videogfx instead of SDL\n");
@@ -779,36 +784,38 @@ int main(int argc, char** argv)
 
           if (img) {
             // save the CU_map
-          
-            char fname[100];
-
-            sprintf(fname, "/home/huyb/Lab/ECCV2022/test_%03d.bin", framecnt);
-
-            printf("frame count: %d \n", framecnt);
-
-            char** CU_map;
-            CU_map = de265_get_CU_map(img);
-
-            std::ofstream outfile(fname, std::ios::binary | std::ios::out);
-
-            if (!outfile.is_open())
+            if (write_cu_map)
             {
-              perror("The output file is not correctly opened!\n");
-            }
+              char fname[100];
 
-            // for (std::vector<std::vector<char>>::iterator it=CU_map.begin();it!=CU_map.end();++it)
-            // {
-            //   outfile.write(&it->front(), it->size() * sizeof(char));
-            // }
+              sprintf(fname, "%s/test_%03d.bin", CU_map_dir ,framecnt);
 
-            int frame_width = de265_get_image_width(img,0);
-            int frame_height = de265_get_image_height(img,0);
+              printf("frame count: %d \n", framecnt);
 
-            for (int i=0; i<frame_height; i++)
-              for (int j=0; j<frame_width; j++)
+              char** CU_map;
+              CU_map = de265_get_CU_map(img);
+
+              std::ofstream outfile(fname, std::ios::binary | std::ios::out);
+
+              if (!outfile.is_open())
               {
-                outfile.write(&CU_map[i][j], sizeof(char));
+                perror("The output file is not correctly opened!\n");
               }
+
+              // for (std::vector<std::vector<char>>::iterator it=CU_map.begin();it!=CU_map.end();++it)
+              // {
+              //   outfile.write(&it->front(), it->size() * sizeof(char));
+              // }
+
+              int frame_width = de265_get_image_width(img,0);
+              int frame_height = de265_get_image_height(img,0);
+
+              for (int i=0; i<frame_height; i++)
+                for (int j=0; j<frame_width; j++)
+                {
+                  outfile.write(&CU_map[i][j], sizeof(char));
+                }
+            }
 
             if (measure_quality) {
               measure(img);
