@@ -193,6 +193,10 @@ LIBDE265_API int de265_get_image_transfer_characteristics(const struct de265_ima
 LIBDE265_API int de265_get_image_matrix_coefficients(const struct de265_image*);
 
 LIBDE265_API char **de265_get_CU_map(const de265_image* srcimg);
+LIBDE265_API char **de265_get_PU_map(const de265_image* srcimg);
+LIBDE265_API short ***de265_get_MV_map(const de265_image* srcimg);
+
+short ***fill_MV_map(const de265_image* srcimg, short*** MV_map, int x0, int y0, int w, int h);
 
 /* === decoder === */
 

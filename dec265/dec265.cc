@@ -792,8 +792,11 @@ int main(int argc, char** argv)
 
               printf("frame count: %d \n", framecnt);
 
-              char** CU_map;
-              CU_map = de265_get_CU_map(img);
+              // char** CU_map;
+              // CU_map = de265_get_PU_map(img);
+
+              short*** MV_map;
+              MV_map = de265_get_MV_map(img);
 
               std::ofstream outfile(fname, std::ios::binary | std::ios::out);
 
@@ -802,18 +805,21 @@ int main(int argc, char** argv)
                 perror("The output file is not correctly opened!\n");
               }
 
-              // for (std::vector<std::vector<char>>::iterator it=CU_map.begin();it!=CU_map.end();++it)
-              // {
-              //   outfile.write(&it->front(), it->size() * sizeof(char));
-              // }
-
               int frame_width = de265_get_image_width(img,0);
               int frame_height = de265_get_image_height(img,0);
+
+              // for (int i=0; i<frame_height; i++)
+              //   for (int j=0; j<frame_width; j++)
+              //   {
+              //     outfile.write(&CU_map[i][j], sizeof(char));
+              //   }
 
               for (int i=0; i<frame_height; i++)
                 for (int j=0; j<frame_width; j++)
                 {
-                  outfile.write(&CU_map[i][j], sizeof(char));
+                  outfile.write((char*)&MV_map[i][j][0], sizeof(short));
+                  outfile.write((char*)&MV_map[i][j][1], sizeof(short));
+                  outfile.write((char*)&MV_map[i][j][2], sizeof(short));
                 }
             }
 

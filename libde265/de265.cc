@@ -788,3 +788,253 @@ char **de265_get_CU_map(const de265_image* srcimg)
   return CU_map;
 }
 
+char **de265_get_PU_map(const de265_image* srcimg)
+{
+  // printf("enter function! \n");
+  const seq_parameter_set& sps = srcimg->get_sps();
+  // printf("get parameter set! \n");
+  int minCbSize = sps.MinCbSizeY;
+
+  // initialize with zeros.
+  int row_cnt = sps.PicHeightInMinCbsY*minCbSize;
+  int col_cnt = sps.PicWidthInMinCbsY*minCbSize;
+
+  // printf("before malloc! \n");
+
+  char **CU_map = (char **)malloc(row_cnt*sizeof(char *));
+
+  for (int i=0; i<row_cnt; i++)
+  {
+    CU_map[i] = (char *)malloc(col_cnt*sizeof(char ));
+    for (int j=0; j<col_cnt; j++)
+      CU_map[i][j] = 0;
+  }
+  // printf("matrix initialization! \n");
+  // std::vector<std::vector<char>> CU_map(sps.PicHeightInMinCbsY*minCbSize, std::vector<char> (sps.PicWidthInMinCbsY*minCbSize,0));
+
+  // printf("max y: %d, max x: %d, minCbSize: %d \n", sps.PicHeightInMinCbsY, sps.PicWidthInMinCbsY, minCbSize);
+
+  for (int y0=0;y0<sps.PicHeightInMinCbsY;y0++)
+    for (int x0=0;x0<sps.PicWidthInMinCbsY;x0++)
+    {
+      int log2CbSize = srcimg->get_log2CbSize_cbUnits(x0,y0);
+      if (log2CbSize==0) {
+        continue;
+      }
+
+      int xb = x0*minCbSize;
+      int yb = y0*minCbSize;
+
+      int CbSize = 1<<log2CbSize;
+
+      enum PartMode partMode = srcimg->get_PartMode(xb,yb);
+
+      int HalfCbSize = (1<<(log2CbSize-1));
+
+      switch (partMode) {
+          case PART_2Nx2N:
+            for (int xx=xb;xx<xb+CbSize;xx++)
+              for (int yy=yb;yy<yb+CbSize;yy++)
+              {
+                CU_map[yy][xx] = CbSize;
+                // if (yy < 18 && xx < 18)
+                  // printf("x0: %d, y0: %d, CbSize: %d. \n", xx, yy, CU_map[yy][xx]);
+              }
+            break;
+          case PART_2NxN:
+            for (int xx=xb;xx<xb+CbSize;xx++)
+              for (int yy=yb;yy<yb+CbSize;yy++)
+              {
+                CU_map[yy][xx] = HalfCbSize;
+              }
+            break;
+          case PART_Nx2N:
+            for (int xx=xb;xx<xb+CbSize;xx++)
+              for (int yy=yb;yy<yb+CbSize;yy++)
+              {
+                CU_map[yy][xx] = HalfCbSize;
+              }
+            break;
+          case PART_NxN:
+            for (int xx=xb;xx<xb+CbSize;xx++)
+              for (int yy=yb;yy<yb+CbSize;yy++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2;
+              }
+            break;
+          case PART_2NxnU:
+            for (int xx=xb;xx<xb+CbSize;xx++)
+            {
+              for (int yy=yb;yy<yb+CbSize/4;yy++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2;
+              }
+              for (int yy=yb+CbSize/4;yy<yb+CbSize;yy++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2+HalfCbSize;
+              }
+            }
+            break;
+          case PART_2NxnD:
+            for (int xx=xb;xx<xb+CbSize;xx++)
+            {
+              for (int yy=yb;yy<yb+CbSize/4*3;yy++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2+HalfCbSize;
+              }
+              for (int yy=yb+CbSize/4*3;yy<yb+CbSize;yy++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2;
+              }
+            }
+            break;
+          case PART_nLx2N:
+            for (int yy=yb;yy<yb+CbSize;yy++)
+            {
+              for (int xx=xb;xx<xb+CbSize/4;xx++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2;
+              }
+              for (int xx=xb+CbSize/4;xx<xb+CbSize;xx++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2+HalfCbSize;
+              }
+            }
+            break;
+          case PART_nRx2N:
+            for (int yy=yb;yy<yb+CbSize;yy++)
+            {
+              for (int xx=xb;xx<xb+CbSize/4*3;xx++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2+HalfCbSize;
+              }
+              for (int xx=xb+CbSize/4*3;xx<xb+CbSize;xx++)
+              {
+                CU_map[yy][xx] = HalfCbSize/2;
+              }
+            }
+            break;
+          default:
+          printf("Unknown PartMode %d\n !!", partMode);
+            break;
+      }
+
+    }
+  
+  return CU_map;
+}
+
+short ***de265_get_MV_map(const de265_image* srcimg)
+{
+  // printf("enter function! \n");
+  const seq_parameter_set& sps = srcimg->get_sps();
+  // printf("get parameter set! \n");
+  int minCbSize = sps.MinCbSizeY;
+
+  // initialize with zeros.
+  int row_cnt = sps.PicHeightInMinCbsY*minCbSize;
+  int col_cnt = sps.PicWidthInMinCbsY*minCbSize;
+
+  // printf("before malloc! \n");
+
+  short ***MV_map = (short ***)malloc(row_cnt*sizeof(short **));
+
+  for (int i=0; i<row_cnt; i++)
+  {
+    MV_map[i] = (short **)malloc(col_cnt*sizeof(short *));
+    for (int j=0; j<col_cnt; j++)
+    {
+      MV_map[i][j] = (short *)malloc(3*sizeof(short ));
+      MV_map[i][j][0] = 0;
+      MV_map[i][j][1] = 1;
+      MV_map[i][j][2] = 0;
+    }
+  }
+
+  for (int y0=0;y0<sps.PicHeightInMinCbsY;y0++)
+    for (int x0=0;x0<sps.PicWidthInMinCbsY;x0++)
+    {
+      int log2CbSize = srcimg->get_log2CbSize_cbUnits(x0,y0);
+      if (log2CbSize==0) {
+        continue;
+      }
+
+      int xb = x0*minCbSize;
+      int yb = y0*minCbSize;
+
+      int CbSize = 1<<log2CbSize;
+
+      enum PartMode partMode = srcimg->get_PartMode(xb,yb);
+
+      int HalfCbSize = (1<<(log2CbSize-1));
+
+      switch (partMode) {
+          case PART_2Nx2N:
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb, CbSize, CbSize);
+            break;
+          case PART_2NxN:
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb, CbSize, CbSize/2);
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb+HalfCbSize, CbSize, CbSize/2);
+            break;
+          case PART_Nx2N:
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb, CbSize/2, CbSize);
+            MV_map = fill_MV_map(srcimg, MV_map, xb+HalfCbSize, yb, CbSize/2, CbSize);
+            break;
+          case PART_NxN:
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb, CbSize/2, CbSize/2);
+            MV_map = fill_MV_map(srcimg, MV_map, xb+HalfCbSize, yb, CbSize/2, CbSize/2);
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb+HalfCbSize, CbSize/2, CbSize/2);
+            MV_map = fill_MV_map(srcimg, MV_map, xb+HalfCbSize, yb+HalfCbSize, CbSize/2, CbSize/2);
+            break;
+          case PART_2NxnU:
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb, CbSize, CbSize/4);
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb+CbSize/4, CbSize, CbSize*3/4);
+            break;
+          case PART_2NxnD:
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb, CbSize, CbSize*3/4);
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb+CbSize*3/4, CbSize, CbSize/4);
+            break;
+          case PART_nLx2N:
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb, CbSize/4, CbSize);
+            MV_map = fill_MV_map(srcimg, MV_map, xb+CbSize/4, yb, CbSize*3/4, CbSize);
+            break;
+          case PART_nRx2N:
+            MV_map = fill_MV_map(srcimg, MV_map, xb, yb, CbSize*3/4, CbSize);
+            MV_map = fill_MV_map(srcimg, MV_map, xb+CbSize*3/4, yb, CbSize/4, CbSize);
+            break;
+          default:
+          printf("Unknown PartMode %d\n !!", partMode);
+            break;
+      }
+
+    }
+  
+  return MV_map;
+}
+
+
+short ***fill_MV_map(const de265_image* srcimg, short*** MV_map, int x0, int y0, int w, int h)
+{
+  const PBMotion& mvi = srcimg->get_mv_info(x0,y0);
+  int mv_x, mv_y, ref_idx;
+
+  if (mvi.predFlag[0]) {
+    mv_x = mvi.mv[0].x;
+    mv_y = mvi.mv[0].y;
+    ref_idx = mvi.refIdx[0];
+  }
+  if (mvi.predFlag[1]) {
+    mv_x = mvi.mv[1].x;
+    mv_y = mvi.mv[1].y;
+    ref_idx = mvi.refIdx[1];
+  }
+  for (int xx=x0;xx<x0+w;xx++)
+    for (int yy=y0;yy<y0+h;yy++)
+    {
+      MV_map[yy][xx][0] = mv_x;
+      MV_map[yy][xx][1] = mv_y;
+      MV_map[yy][xx][2] = ref_idx;
+    }
+
+  return MV_map;
+}
